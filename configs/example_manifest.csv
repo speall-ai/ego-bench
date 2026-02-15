@@ -1,0 +1,5 @@
+operator_id,video_path
+op_001,videos/operator_001/session_01.mp4
+op_001,videos/operator_001/session_02.mp4
+op_002,videos/operator_002/session_01.mp4
+op_003,videos/operator_003/session_01.mp4

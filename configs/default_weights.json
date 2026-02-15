@@ -1,0 +1,8 @@
+{
+  "brightness": 0.20,
+  "sharpness": 0.20,
+  "stability": 0.25,
+  "hand_detection_rate": 0.25,
+  "hand_landmark_quality": 0.10,
+  "tracking_continuity": 0.10
+}
