@@ -10,9 +10,10 @@ import typer
 from rich.console import Console
 
 from video_benchmark.acceleration import detect_acceleration, require_ffmpeg
-from video_benchmark.config import BenchmarkSettings, ScoringWeights
+from video_benchmark.config import BenchmarkSettings, ScoringWeights, ScoringWeightsV2
 from video_benchmark.output.console import print_summary
-from video_benchmark.output.csv_export import export_rankings_csv
+from video_benchmark.output.csv_export import export_rankings_csv, export_video_scores_csv
+from video_benchmark.output.html_report import export_html_report
 from video_benchmark.output.json_export import export_detailed_json
 from video_benchmark.pipeline.orchestrator import run_pipeline
 from video_benchmark.sources.base import VideoFile
@@ -36,24 +37,48 @@ def score(
     prefix: Annotated[str, typer.Option(help="S3 key prefix")] = "",
     manifest: Annotated[Path | None, typer.Option(help="CSV manifest file path")] = None,
     output: Annotated[Path, typer.Option(help="Output directory")] = Path("results"),
-    workers: Annotated[int, typer.Option(help="Number of parallel workers")] = 0,
+    workers: Annotated[
+        int,
+        typer.Option(help="Parallel workers (<=0 auto-tunes, GPU-aware on Apple)"),
+    ] = 0,
     sample_rate: Annotated[int, typer.Option(help="Frames per second to sample")] = 1,
     segments: Annotated[int, typer.Option(help="Number of segments to sample")] = 3,
     no_gpu: Annotated[bool, typer.Option("--no-gpu", help="Disable GPU acceleration")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", help="Verbose logging")] = False,
     format: Annotated[str, typer.Option(help="Output format: csv, json, or both")] = "both",
-    weights_file: Annotated[Path | None, typer.Option(help="Custom weights JSON file")] = None,
+    weights_version: Annotated[
+        str,
+        typer.Option(
+            "--weights-version",
+            help="Scoring model: v1 (classical) or v2 (ML-enhanced)",
+        ),
+    ] = "v2",
+    weights_file: Annotated[
+        Path | None,
+        typer.Option(help="Custom V1 weights JSON file"),
+    ] = None,
+    weights_v2_file: Annotated[
+        Path | None,
+        typer.Option("--weights-v2-file", help="Custom V2 weights JSON file"),
+    ] = None,
+    report: Annotated[
+        bool,
+        typer.Option("--report", help="Generate HTML report with charts and frame thumbnails"),
+    ] = False,
 ) -> None:
     """Score and rank videos from a directory or S3 bucket."""
     require_ffmpeg()
 
-    import os
-    if workers <= 0:
-        workers = os.cpu_count() or 4
+    if weights_version not in {"v1", "v2"}:
+        console.print("[red]--weights-version must be 'v1' or 'v2'.[/red]")
+        raise typer.Exit(1)
 
     scoring_weights = ScoringWeights()
+    scoring_weights_v2 = ScoringWeightsV2()
     if weights_file:
         scoring_weights = ScoringWeights.from_json(weights_file)
+    if weights_v2_file:
+        scoring_weights_v2 = ScoringWeightsV2.from_json(weights_v2_file)
 
     settings = BenchmarkSettings(
         source=source,
@@ -69,6 +94,9 @@ def score(
         verbose=verbose,
         format=format,
         weights=scoring_weights,
+        weights_version=weights_version,
+        weights_v2=scoring_weights_v2,
+        report=report,
     )
 
     if verbose:
@@ -92,11 +120,19 @@ def score(
     elapsed = time.time() - start
 
     # Output
-    print_summary(result.scores, result.operator_rankings, result.failed, elapsed)
+    print_summary(
+        result.scores,
+        result.operator_rankings,
+        result.failed,
+        elapsed,
+        run_info=result.run_info,
+    )
 
     if format in ("csv", "both"):
         csv_path = export_rankings_csv(result.operator_rankings, output)
         console.print(f"Rankings CSV: [bold]{csv_path}[/bold]")
+        video_csv_path = export_video_scores_csv(result.scores, output)
+        console.print(f"Video Metrics CSV: [bold]{video_csv_path}[/bold]")
 
     if format in ("json", "both"):
         json_path = export_detailed_json(
@@ -104,18 +140,39 @@ def score(
         )
         console.print(f"Detailed JSON: [bold]{json_path}[/bold]")
 
+    if report:
+        report_path = export_html_report(
+            result.scores,
+            result.operator_rankings,
+            result.failed,
+            output,
+            frame_cache=result.frame_cache,
+            elapsed=elapsed,
+        )
+        console.print(f"HTML Report: [bold]{report_path}[/bold]")
+
 
 @app.command(name="score-single")
 def score_single(
     video_path: Annotated[Path, typer.Argument(help="Path to a single video file")],
     no_gpu: Annotated[bool, typer.Option("--no-gpu", help="Disable GPU acceleration")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", help="Verbose logging")] = False,
+    weights_version: Annotated[
+        str,
+        typer.Option(
+            "--weights-version",
+            help="Scoring model: v1 (classical) or v2 (ML-enhanced)",
+        ),
+    ] = "v2",
 ) -> None:
     """Quick-test a single video file."""
     require_ffmpeg()
 
     if not video_path.exists():
         console.print(f"[red]Video not found: {video_path}[/red]")
+        raise typer.Exit(1)
+    if weights_version not in {"v1", "v2"}:
+        console.print("[red]--weights-version must be 'v1' or 'v2'.[/red]")
         raise typer.Exit(1)
 
     if verbose:
@@ -132,13 +189,20 @@ def score_single(
         workers=1,
         no_gpu=no_gpu,
         verbose=verbose,
+        weights_version=weights_version,
     )
 
     start = time.time()
     result = run_pipeline([video], settings)
     elapsed = time.time() - start
 
-    print_summary(result.scores, result.operator_rankings, result.failed, elapsed)
+    print_summary(
+        result.scores,
+        result.operator_rankings,
+        result.failed,
+        elapsed,
+        run_info=result.run_info,
+    )
 
 
 def _resolve_videos(settings: BenchmarkSettings) -> list[VideoFile]:
