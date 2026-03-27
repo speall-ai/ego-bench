@@ -18,7 +18,7 @@ export function Verdict({ score }: { score: VideoScore }) {
         </span>
         <span className="text-[14px] text-muted">{score.grade}</span>
       </div>
-      <p className="max-w-sm text-[14px] leading-relaxed text-dim">
+      <p className="max-w-sm text-[13px] leading-relaxed text-dim">
         {verdict(score)}
       </p>
     </motion.div>
@@ -26,23 +26,41 @@ export function Verdict({ score }: { score: VideoScore }) {
 }
 
 function verdict(s: VideoScore): string {
-  const p: string[] = [];
+  const notes: string[] = [];
   const weakest = weakestLimb(s.metrics.limbScores);
-  if (s.overallScore >= 80) p.push("overall, this looks strong.");
-  else if (s.overallScore >= 60) p.push("overall, this is in a workable place.");
-  else p.push("there is a good base here, with a few areas worth refining.");
-  if (s.metrics.stability < 40) p.push("camera motion is a bit noticeable.");
-  if (s.temporal.motionJerkScore < 45) p.push("head or scene motion changes abruptly in a few stretches.");
-  if (s.metrics.sharpness < 30) p.push("focus softens in places.");
-  if (s.metrics.brightness < 30) p.push("some frames are darker than ideal.");
-  if (s.metrics.exposureIntegrity < 55) p.push("exposure clipping shows up in brighter or darker regions.");
-  if (s.metrics.handDetectionRate < 30) p.push("hands are only visible intermittently.");
-  else if (s.metrics.interactionZoneCoverage < 35) p.push("hand activity spends limited time in the lower-center interaction zone.");
-  if (s.metrics.bimanualRate < 20) p.push("both hands are not visible together very often.");
-  if (s.metrics.bodyDetectionRate < 40) p.push("full limb mapping only holds in parts of the clip.");
-  else if (s.metrics.limbVisibility < 45) p.push("some arm or leg landmarks drop out through motion or framing.");
-  if (weakest.score < 42) p.push(`${weakest.label} tracking is the weakest limb signal right now.`);
-  if (s.temporal.shotChanges > 0) p.push(`${s.temporal.shotChanges} strong scene transitions or cuts show up.`);
-  if (s.temporal.qualityDrops > 2) p.push(`${s.temporal.qualityDrops} brief quality dips show up.`);
-  return p.join(" ");
+  const lead =
+    s.overallScore >= 80
+      ? "Strong overall signal."
+      : s.overallScore >= 60
+        ? "Usable overall signal."
+        : "Mixed overall signal.";
+
+  if (s.metrics.stability < 40 || s.temporal.motionJerkScore < 45) {
+    notes.push("Motion still feels a bit abrupt.");
+  }
+  if (s.metrics.sharpness < 30) {
+    notes.push("Focus softens in a few sections.");
+  }
+  if (s.metrics.brightness < 30 || s.metrics.exposureIntegrity < 55) {
+    notes.push("Exposure could be cleaner.");
+  }
+  if (s.metrics.segmentationAvailable && s.metrics.framingIntegrity < 55) {
+    notes.push("Foreground framing could be cleaner.");
+  }
+  if (s.metrics.handDetectionRate < 30) {
+    notes.push("Hands drop out too often.");
+  } else if (s.metrics.interactionZoneCoverage < 35) {
+    notes.push("Hand activity does not stay in the action zone for long.");
+  }
+  if (s.metrics.bimanualRate < 20) {
+    notes.push("Two-hand coverage is limited.");
+  }
+  if (s.metrics.bodyDetectionRate < 40 || s.metrics.limbVisibility < 45 || weakest.score < 42) {
+    notes.push(`${weakest.label} is the weakest limb track right now.`);
+  }
+  if (s.temporal.shotChanges > 0 || s.temporal.qualityDrops > 2) {
+    notes.push("A few temporal breaks are visible.");
+  }
+
+  return [lead, ...notes.slice(0, 2)].join(" ");
 }

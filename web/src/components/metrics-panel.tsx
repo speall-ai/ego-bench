@@ -27,7 +27,7 @@ function Toggle({ label, children }: { label: string; children: React.ReactNode 
     <div className="mt-3 border-t border-border pt-3">
       <button
         onClick={() => setOpen(!open)}
-        className="text-[13px] text-muted transition-colors hover:text-dim"
+        className="inline-flex items-center gap-2 text-[12px] uppercase tracking-[0.08em] text-muted transition-colors hover:text-dim"
       >
         {open ? "−" : "+"} {label}
       </button>
@@ -45,25 +45,25 @@ function formatTimestamp(seconds: number): string {
   return `${remainingSeconds.toFixed(1)}s`;
 }
 
-function Histogram({ bins }: { bins: number[] }) {
+function Histogram({ bins, compact = false }: { bins: number[]; compact?: boolean }) {
   const maxBin = Math.max(1, ...bins);
   return (
     <div className="space-y-1">
-      <div className="flex items-end gap-[2px] rounded-[10px] border border-border bg-bg px-2 py-2">
+      <div className={`flex items-end gap-[2px] rounded-[10px] border border-border bg-bg px-2 ${compact ? "py-1.5" : "py-2"}`}>
         {bins.map((bin, index) => (
           <div
             key={index}
             className="flex-1 rounded-[2px] bg-text"
             style={{
               minWidth: "2px",
-              height: `${Math.max(8, (bin / maxBin) * 34)}px`,
+              height: `${Math.max(compact ? 5 : 8, (bin / maxBin) * (compact ? 18 : 34))}px`,
               opacity: 0.14 + (bin / maxBin) * 0.86,
             }}
             title={`${bin.toFixed(1)}%`}
           />
         ))}
       </div>
-      <div className="flex justify-between text-[10px] text-muted">
+      <div className={`flex justify-between text-muted ${compact ? "text-[9px]" : "text-[10px]"}`}>
         <span>shadows</span>
         <span>highlights</span>
       </div>
@@ -77,32 +77,34 @@ function limbTone(score: number): string {
   return "weak";
 }
 
-function LimbMatrix({ scores }: { scores: LimbScores }) {
+function LimbMatrix({ scores, compact = false }: { scores: LimbScores; compact?: boolean }) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <div className={`grid gap-2 ${compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"}`}>
       {LIMB_DEFINITIONS.map((limb) => {
         const score = scores[limb.key];
         return (
           <div
             key={limb.key}
-            className="rounded-[14px] border border-border bg-bg px-3 py-2.5"
+            className={`rounded-[14px] border border-border bg-bg ${compact ? "px-2.5 py-2" : "px-3 py-2.5"}`}
           >
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[11px] uppercase tracking-[0.08em] text-muted">
-                {limb.label}
+              <span className={`${compact ? "text-[10px]" : "text-[11px]"} uppercase tracking-[0.08em] text-muted`}>
+                {compact
+                  ? limb.label.replace("left ", "l ").replace("right ", "r ")
+                  : limb.label}
               </span>
-              <span className="text-[11px] text-muted">
+              <span className={`${compact ? "text-[10px]" : "text-[11px]"} text-muted`}>
                 {limbTone(score)}
               </span>
             </div>
-            <div className="mt-2 flex items-center gap-2">
-              <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-border">
+            <div className={`flex items-center gap-2 ${compact ? "mt-1.5" : "mt-2"}`}>
+              <div className={`flex-1 overflow-hidden rounded-full bg-border ${compact ? "h-[2px]" : "h-[3px]"}`}>
                 <div
                   className="h-full rounded-full bg-text transition-[width] duration-300 ease-out"
                   style={{ width: `${Math.max(4, Math.min(100, score))}%` }}
                 />
               </div>
-              <span className="w-8 text-right text-[12px] tabular-nums text-text">
+              <span className={`w-8 text-right tabular-nums text-text ${compact ? "text-[11px]" : "text-[12px]"}`}>
                 {score.toFixed(0)}
               </span>
             </div>
@@ -128,88 +130,98 @@ function FramesSection({
 
   if (!activeFrame) return null;
 
-  const combinedClip = activeFrame.shadowClip + activeFrame.highlightClip;
-
   return (
-    <div className="space-y-3">
-      <div className="rounded-[18px] border border-border bg-surface p-3">
-        <div className="relative overflow-hidden rounded-[14px] border border-border bg-bg">
-          <div className="aspect-video">
-            {activePreview ? (
-              <motion.img
-                key={activePreview.src}
-                src={activePreview.src}
-                alt={`frame ${safeIndex + 1} at ${formatTimestamp(activeFrame.timestamp)}`}
-                initial={reduced ? false : { opacity: 0.88, scale: 0.985 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={reduced ? { duration: 0 } : { duration: 0.18, ease: "easeOut" }}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-[12px] text-muted">
-                preview unavailable
-              </div>
-            )}
-          </div>
+    <div className="space-y-2.5">
+      <div className="rounded-[16px] border border-border bg-surface p-2.5">
+        <div className="mx-auto max-w-[286px]">
+          <div className="relative overflow-hidden rounded-[12px] border border-border bg-bg">
+            <div className="aspect-[16/10]">
+              {activePreview ? (
+                <motion.img
+                  key={activePreview.src}
+                  src={activePreview.src}
+                  alt={`frame ${safeIndex + 1} at ${formatTimestamp(activeFrame.timestamp)}`}
+                  initial={reduced ? false : { opacity: 0.88, scale: 0.985 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={reduced ? { duration: 0 } : { duration: 0.18, ease: "easeOut" }}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-[12px] text-muted">
+                  preview unavailable
+                </div>
+              )}
+            </div>
 
-          <div className="pointer-events-none absolute left-2 top-2 rounded-full bg-bg/92 px-2 py-1 text-[11px] text-dim backdrop-blur-sm">
-            frame {safeIndex + 1}/{perFrame.length}
-          </div>
-          <div className="pointer-events-none absolute right-2 top-2 rounded-full bg-bg/92 px-2 py-1 text-[11px] text-dim backdrop-blur-sm">
-            {formatTimestamp(activeFrame.timestamp)}
+            <div className="pointer-events-none absolute left-2 top-2 rounded-full bg-bg/92 px-2 py-1 text-[10px] text-dim backdrop-blur-sm">
+              {safeIndex + 1}/{perFrame.length}
+            </div>
+            <div className="pointer-events-none absolute right-2 top-2 rounded-full bg-bg/92 px-2 py-1 text-[10px] text-dim backdrop-blur-sm">
+              {formatTimestamp(activeFrame.timestamp)}
+            </div>
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="mt-2.5 grid grid-cols-3 gap-1.5">
           {([
-            ["bright", activeFrame.brightness.toFixed(0)],
-            ["sharp", activeFrame.sharpness.toFixed(0)],
-            ["clarity", activeFrame.blur.toFixed(0)],
             ["motion", activeFrame.frameDiff >= 0 ? activeFrame.frameDiff.toFixed(1) : "—"],
             ["action", activeFrame.actionMotion >= 0 ? activeFrame.actionMotion.toFixed(1) : "—"],
             ["edge", activeFrame.peripheralMotion >= 0 ? activeFrame.peripheralMotion.toFixed(1) : "—"],
             ["zone", activeFrame.interactionZoneCoverage.toFixed(0)],
-            ["clip", combinedClip.toFixed(1)],
             ["limbs", activeFrame.bodyDetected ? activeFrame.limbVisibility.toFixed(0) : "—"],
-            ["stable", activeFrame.stability >= 0 ? activeFrame.stability.toFixed(0) : "—"],
+            ["mask", activeFrame.segmentationAvailable ? activeFrame.foregroundCoverage.toFixed(0) : "—"],
           ] as const).map(([label, value]) => (
-            <div key={label} className="rounded-[12px] border border-border bg-bg px-2.5 py-2">
-              <div className="text-[10px] uppercase tracking-[0.08em] text-muted">{label}</div>
-              <div className="mt-1 text-[13px] tabular-nums text-text">{value}</div>
+            <div key={label} className="rounded-[10px] border border-border bg-bg px-2 py-1.5">
+              <div className="text-[9px] uppercase tracking-[0.08em] text-muted">{label}</div>
+              <div className="mt-0.5 text-[12px] tabular-nums text-text">{value}</div>
             </div>
           ))}
         </div>
 
-        <div className="mt-3">
-          <div className="mb-1 text-[10px] uppercase tracking-[0.08em] text-muted">luma spread</div>
-          <Histogram bins={activeFrame.lumaHistogram} />
-        </div>
+        <div className="mt-2.5 space-y-2">
+          <div>
+            <div className="mb-1 text-[9px] uppercase tracking-[0.08em] text-muted">luma spread</div>
+            <Histogram bins={activeFrame.lumaHistogram} compact />
+          </div>
 
-        <div className="mt-3">
-          <div className="mb-2 text-[10px] uppercase tracking-[0.08em] text-muted">limb map</div>
-          <LimbMatrix scores={activeFrame.limbScores} />
+          <div>
+            <div className="mb-1 text-[9px] uppercase tracking-[0.08em] text-muted">limb map</div>
+            <LimbMatrix scores={activeFrame.limbScores} compact />
+          </div>
+
+          {activeFrame.segmentationAvailable && (
+            <div className="grid grid-cols-3 gap-1.5">
+              {([
+                ["fg", activeFrame.foregroundCoverage.toFixed(0)],
+                ["work", activeFrame.actionZoneForeground.toFixed(0)],
+                ["cut", activeFrame.edgeCutoff.toFixed(0)],
+              ] as const).map(([label, value]) => (
+                <div key={label} className="rounded-[10px] border border-border bg-bg px-2 py-1.5">
+                  <div className="text-[9px] uppercase tracking-[0.08em] text-muted">{label}</div>
+                  <div className="mt-0.5 text-[12px] tabular-nums text-text">{value}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      <p className="text-[11px] text-muted">hover or focus a frame bar to inspect the shot, mapped limbs, interaction zone, and wasm motion/exposure stats</p>
+      <p className="text-[10px] text-muted">hover a bar to inspect that frame</p>
 
       {([
-        ["brightness", "light"],
-        ["sharpness", "focus"],
-        ["blur", "clarity"],
         ["frameDiff", "motion"],
         ["actionMotion", "action"],
         ["peripheralMotion", "edge"],
         ["interactionZoneCoverage", "zone"],
       ] as const).map(([key, label]) => (
         <div key={key} className="flex items-center gap-2">
-          <span className="w-12 text-right text-[11px] text-muted">{label}</span>
+          <span className="w-12 text-right text-[10px] text-muted">{label}</span>
 
-          <div className="flex flex-1 items-end gap-[2px] rounded-[12px] border border-border bg-surface px-2 py-2">
+          <div className="flex flex-1 items-end gap-[2px] rounded-[10px] border border-border bg-surface px-2 py-1.5">
             {perFrame.map((frame, index) => {
               const value = frame[key];
               const active = index === safeIndex;
-              const height = 8 + value * 0.24;
+              const height = 6 + value * 0.18;
               const opacity = active ? 1 : 0.18 + (value / 100) * 0.52;
 
               return (
@@ -227,7 +239,7 @@ function FramesSection({
                     animate={
                       reduced
                         ? undefined
-                        : { y: active ? -2 : 0, scaleX: active ? 1.08 : 1, scaleY: active ? 1.06 : 1 }
+                        : { y: active ? -1.5 : 0, scaleX: active ? 1.06 : 1, scaleY: active ? 1.03 : 1 }
                     }
                     transition={reduced ? { duration: 0 } : { type: "spring", stiffness: 340, damping: 26 }}
                     className="block w-full origin-bottom rounded-[3px] bg-text"
@@ -267,6 +279,13 @@ export function MetricsPanel({ score, previews = [] }: { score: VideoScore; prev
         value={metrics.exposureIntegrity.toFixed(0)}
         pct={metrics.exposureIntegrity}
       />
+      {metrics.segmentationAvailable && (
+        <Row
+          label="mask"
+          value={metrics.segmentationQuality.toFixed(0)}
+          pct={metrics.segmentationQuality}
+        />
+      )}
       <Row
         label="hands"
         value={`${metrics.handDetectionRate.toFixed(0)}%`}
@@ -286,6 +305,24 @@ export function MetricsPanel({ score, previews = [] }: { score: VideoScore; prev
       <Toggle label="limb map">
         <LimbMatrix scores={metrics.limbScores} />
       </Toggle>
+
+      {metrics.segmentationAvailable && (
+        <Toggle label="segmentation">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+            {([
+              ["quality", metrics.segmentationQuality.toFixed(0)],
+              ["foreground", metrics.foregroundCoverage.toFixed(1)],
+              ["workspace", metrics.actionZoneForeground.toFixed(1)],
+              ["edge cut", metrics.edgeCutoff.toFixed(1)],
+            ] as const).map(([k, v]) => (
+              <div key={k} className="flex justify-between">
+                <span className="text-[12px] text-muted">{k}</span>
+                <span className="text-[12px] text-dim">{v}</span>
+              </div>
+            ))}
+          </div>
+        </Toggle>
+      )}
 
       {audio && (
         <Toggle label="audio">
@@ -360,6 +397,21 @@ function DetailedSection({ score }: { score: VideoScore }) {
           max: {Math.max(...perFrame.map((f) => f.brightness)).toFixed(1)}.
         </p>
       </div>
+
+      {metrics.segmentationAvailable && (
+        <div>
+          <p className="mb-1 font-medium text-text">segmentation</p>
+          <p>
+            mediapipe image segmenter runs in a worker and estimates foreground occupancy from a category mask.
+            average foreground coverage: {metrics.foregroundCoverage.toFixed(1)}.
+            action-zone occupancy: {metrics.actionZoneForeground.toFixed(1)}.
+            edge cutoff: {metrics.edgeCutoff.toFixed(1)}.
+            segmentation quality: {metrics.segmentationQuality.toFixed(1)}.
+            framing integrity: {metrics.framingIntegrity.toFixed(1)}.
+            workspace occupancy: {metrics.workspaceOccupancy.toFixed(1)}.
+          </p>
+        </div>
+      )}
 
       <div>
         <p className="mb-1 font-medium text-text">sharpness</p>
@@ -497,9 +549,10 @@ function DetailedSection({ score }: { score: VideoScore }) {
         <p className="mb-1 font-medium text-text">scoring</p>
         <p>
           final score is a weighted sum: brightness 10%, sharpness 11%, clarity 11%,
-          stability 10%, hand detection rate 12%, hand confidence 4%, body mapping rate 6%,
-          limb visibility 7%, interaction-zone coverage 9%, two-hand visibility 5%,
-          exposure integrity 7%, audio 4%, temporal 4%.
+          stability 9%, hand detection rate 11%, hand confidence 4%, body mapping rate 5%,
+          limb visibility 6%, interaction-zone coverage 8%, two-hand visibility 4%,
+          exposure integrity 6%, segmentation quality 3%, framing integrity 6%,
+          workspace occupancy 4%, audio 3%, temporal 2%.
           all metrics are normalized to 0–100. grade thresholds: a ≥ 90, b ≥ 80, c ≥ 70,
           d ≥ 60, f {'<'} 60. all computation runs locally in your browser via webgpu
           compute shaders and mediapipe wasm. nothing is uploaded.

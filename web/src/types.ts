@@ -19,6 +19,14 @@ export interface LimbScores {
   rightLeg: number;
 }
 
+export interface SegmentationMetrics {
+  segmentationAvailable: boolean;
+  foregroundCoverage: number; // 0-100
+  actionZoneForeground: number; // 0-100
+  edgeCutoff: number; // 0-100
+  segmentationQuality: number; // 0-100
+}
+
 export interface FrameBodyMap {
   poseLandmarks: LandmarkPoint[];
   leftHandLandmarks: LandmarkPoint[];
@@ -37,6 +45,11 @@ export interface FrameMetrics {
   lumaHistogram: number[]; // 16 bins, percentages summing to ~100
   shadowClip: number; // 0-100
   highlightClip: number; // 0-100
+  segmentationAvailable: boolean;
+  foregroundCoverage: number; // 0-100
+  actionZoneForeground: number; // 0-100
+  edgeCutoff: number; // 0-100
+  segmentationQuality: number; // 0-100
   handDetected: boolean;
   bothHandsDetected: boolean;
   handConfidence: number; // 0-1
@@ -92,6 +105,13 @@ export interface VideoScore {
     shadowClip: number;
     highlightClip: number;
     exposureIntegrity: number;
+    segmentationAvailable: boolean;
+    foregroundCoverage: number;
+    actionZoneForeground: number;
+    edgeCutoff: number;
+    segmentationQuality: number;
+    framingIntegrity: number;
+    workspaceOccupancy: number;
   };
   audio: AudioMetrics | null;
   temporal: TemporalMetrics;

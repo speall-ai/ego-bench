@@ -14,6 +14,7 @@ import { OpticalFlowMetric } from "@/gpu/optical-flow";
 import { extractFrames } from "@/video/frame-extractor";
 import { FramePreviewRenderer } from "@/video/frame-previews";
 import { BodyMapper } from "@/metrics/body-mapping";
+import { createSegmentationAnalyzer } from "@/metrics/segmentation";
 import { createFrameAnalyzer } from "@/wasm/frame-analysis";
 import { analyzeAudio } from "@/metrics/audio";
 import { analyzeTemporalConsistency } from "@/metrics/temporal";
@@ -119,6 +120,7 @@ export default function App() {
     let blm: BlurMetric | null = null;
     let ofm: OpticalFlowMetric | null = null;
     let mapper: BodyMapper | null = null;
+    let segmenter: Awaited<ReturnType<typeof createSegmentationAnalyzer>> | null = null;
     let frameAnalyzer: Awaited<ReturnType<typeof createFrameAnalyzer>> | null = null;
     let audioP: Promise<AudioMetrics | null> | null = null;
 
@@ -151,6 +153,10 @@ export default function App() {
       try { mapper = await BodyMapper.create(); done("map", mapper.modelLabel); }
       catch { done("map", "skipped"); }
 
+      add("segment", "segmentation");
+      segmenter = await createSegmentationAnalyzer();
+      done("segment", segmenter.modelLabel);
+
       add("analyze", "analyzing");
       const fm: FrameMetrics[] = [];
       const previews: FramePreview[] = [];
@@ -167,12 +173,28 @@ export default function App() {
         }
         upd("analyze", `analyzing ${i + 1}/${frames.length}`);
         const fr = frames[i];
+        const segmentationPromise = segmenter?.analyzeFrame(fr);
         const [b, s, bl] = await Promise.all([bm.compute(fr), sm.compute(fr), blm.compute(fr)]);
         const st = i > 0 ? await ofm.compute(fr, frames[i - 1]) : -1;
         const pixelStats = frameAnalyzer.analyzeFrame(fr);
         const frameDiffs = i > 0
           ? frameAnalyzer.diffFrames(fr, frames[i - 1])
           : { global: -1, action: -1, peripheral: -1 };
+        const segmentation = segmentationPromise
+          ? await segmentationPromise.catch(() => ({
+            segmentationAvailable: false,
+            foregroundCoverage: 0,
+            actionZoneForeground: 0,
+            edgeCutoff: 0,
+            segmentationQuality: 0,
+          }))
+          : {
+            segmentationAvailable: false,
+            foregroundCoverage: 0,
+            actionZoneForeground: 0,
+            edgeCutoff: 0,
+            segmentationQuality: 0,
+          };
         let hDet = false, bothHands = false, hConf = 0, hLm = 0, interactionZoneCoverage = 0;
         let bodyDet = false, bodyLm = 0, bodyVis = 0, limbVis = 0;
         let limbScores = { torso: 0, leftArm: 0, rightArm: 0, leftLeg: 0, rightLeg: 0 };
@@ -206,6 +228,11 @@ export default function App() {
           lumaHistogram: pixelStats.histogram,
           shadowClip: pixelStats.shadowClip,
           highlightClip: pixelStats.highlightClip,
+          segmentationAvailable: segmentation.segmentationAvailable,
+          foregroundCoverage: segmentation.foregroundCoverage,
+          actionZoneForeground: segmentation.actionZoneForeground,
+          edgeCutoff: segmentation.edgeCutoff,
+          segmentationQuality: segmentation.segmentationQuality,
           handDetected: hDet,
           bothHandsDetected: bothHands,
           handConfidence: hConf,
@@ -257,6 +284,7 @@ export default function App() {
       blm?.destroy();
       ofm?.destroy();
       mapper?.destroy();
+      segmenter?.destroy();
       device?.destroy();
       busy.current = false;
     }
