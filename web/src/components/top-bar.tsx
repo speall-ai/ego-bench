@@ -7,6 +7,7 @@ interface TopBarProps {
   canRename: boolean;
   onRename: (name: string) => void;
   result: VideoScore | null;
+  isBusy: boolean;
 }
 
 function gradePillColor(grade: string): string {
@@ -19,7 +20,7 @@ function gradePillColor(grade: string): string {
   }
 }
 
-export function TopBar({ name, canRename, onRename, result }: TopBarProps) {
+export function TopBar({ name, canRename, onRename, result, isBusy }: TopBarProps) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -45,7 +46,7 @@ export function TopBar({ name, canRename, onRename, result }: TopBarProps) {
   }
 
   return (
-    <div className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-surface/95 px-6 backdrop-blur-sm">
+    <div className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border/60 bg-surface/92 px-6 backdrop-blur-sm">
       <div className="flex min-w-0 flex-1 items-center gap-3">
         {editing ? (
           <input
@@ -78,6 +79,13 @@ export function TopBar({ name, canRename, onRename, result }: TopBarProps) {
         {result && (
           <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${gradePillColor(result.grade)}`}>
             {result.grade} · {result.overallScore.toFixed(1)}
+          </span>
+        )}
+
+        {isBusy && (
+          <span className="inline-flex items-center gap-2 rounded-full bg-surface-alt px-2.5 py-0.5 text-[11px] text-muted">
+            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+            Agent is reviewing
           </span>
         )}
       </div>

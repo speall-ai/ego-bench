@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/sidebar";
 import { FileUpload } from "@/components/file-upload";
 import { AgentStep, type Step } from "@/components/agent-step";
@@ -45,9 +45,11 @@ export default function App() {
   const [framePreviews, setFramePreviews] = useState<FramePreview[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const busy = useRef(false);
   const activeIndexRef = useRef<number | null>(null);
   const stepsRef = useRef<Step[]>([]);
+  const streamRef = useRef<HTMLDivElement>(null);
 
   function updateSteps(updater: (current: Step[]) => Step[]) {
     const next = updater(stepsRef.current);
@@ -72,6 +74,25 @@ export default function App() {
 
   const currentName = activeIndex !== null ? runs[activeIndex]?.name : file?.name ?? null;
 
+  useEffect(() => {
+    if (!streamRef.current) return;
+    streamRef.current.scrollTo({ top: streamRef.current.scrollHeight, behavior: "smooth" });
+  }, [steps.length, result, error, isAnalyzing]);
+
+  const agentInsights = result
+    ? [
+      result.metrics.stability < 45 || result.temporal.motionJerkScore < 45
+        ? "Signal looks unstable in hand regions during transitions."
+        : "Motion transitions look mostly steady.",
+      result.metrics.bodyDetectionRate >= 55
+        ? "Body tracking is strong across most frames."
+        : "Body tracking confidence drops in parts of the clip.",
+      result.metrics.limbVisibility < 50
+        ? "Limb consistency drops intermittently and may need tighter framing."
+        : "Limb consistency holds up well frame to frame.",
+    ]
+    : [];
+
   function renameRun(i: number, name: string) {
     setRuns((prev) => prev.map((r, idx) => (idx === i ? { ...r, name } : r)));
   }
@@ -89,6 +110,7 @@ export default function App() {
     setError(null);
     setSteps([]);
     setActiveIndex(null);
+    setIsAnalyzing(false);
   }
 
   function selectRun(i: number) {
@@ -105,6 +127,7 @@ export default function App() {
   async function handleFile(f: File) {
     if (busy.current) return;
     busy.current = true;
+    setIsAnalyzing(true);
     activeIndexRef.current = null;
     stepsRef.current = [];
     setFile(f);
@@ -287,6 +310,7 @@ export default function App() {
       segmenter?.destroy();
       device?.destroy();
       busy.current = false;
+      setIsAnalyzing(false);
     }
   }
 
@@ -307,6 +331,7 @@ export default function App() {
           canRename={activeIndex !== null}
           onRename={renameActive}
           result={result}
+          isBusy={isAnalyzing}
         />
 
         <div className="flex-1 overflow-y-auto">
@@ -316,21 +341,45 @@ export default function App() {
             </div>
           )}
 
-          {(steps.length > 0 || result) && (
-            <div className="mx-auto max-w-md px-8 py-10">
-              {steps.length > 0 && (
-                <div className="mb-8">
-                  {steps.map((s, i) => <AgentStep key={s.id} step={s} index={i} />)}
+          {(steps.length > 0 || result || error) && (
+            <div className="mx-auto max-w-2xl px-8 py-10">
+              <div className="mb-6 rounded-2xl bg-surface-alt/70 p-5">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-[12px] uppercase tracking-[0.08em] text-muted">Agent stream</p>
+                  {isAnalyzing && (
+                    <span className="inline-flex items-center gap-2 text-[12px] text-muted">
+                      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-accent" />
+                      thinking
+                    </span>
+                  )}
                 </div>
-              )}
 
-              {error && <p className="mb-6 text-[14px] text-text">{error}</p>}
+                <div ref={streamRef} className="max-h-[320px] space-y-2 overflow-y-auto pr-1">
+                  {steps.map((s, i) => <AgentStep key={s.id} step={s} index={i} />)}
+
+                  {result && (
+                    <>
+                      <p className="pt-2 text-[13px] leading-relaxed text-dim">Review complete. Synthesizing findings.</p>
+                      {agentInsights.map((line, index) => (
+                        <p
+                          key={`insight-${index}`}
+                          className="text-[13px] leading-relaxed text-dim"
+                          style={{ opacity: 0.78 + index * 0.1 }}
+                        >
+                          {line}
+                        </p>
+                      ))}
+                    </>
+                  )}
+
+                  {error && <p className="text-[13px] text-danger">{error}</p>}
+                </div>
+              </div>
 
               {result && (
                 <>
-                  <div className="h-px bg-border mb-8" />
                   <Verdict score={result} />
-                  <div className="h-px bg-border my-8" />
+                  <div className="my-8 h-px bg-border" />
                   <MetricsPanel score={result} previews={framePreviews} />
                 </>
               )}

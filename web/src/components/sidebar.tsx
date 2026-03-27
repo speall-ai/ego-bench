@@ -22,18 +22,18 @@ export function Sidebar({
   onNew,
 }: SidebarProps) {
   return (
-    <div className="flex w-64 flex-col border-r border-border bg-surface">
+    <div className="flex w-64 flex-col bg-surface shadow-[inset_-1px_0_0_0_rgba(17,24,39,0.04)]">
       <div className="flex h-14 items-center justify-between px-5">
         <span className="text-[15px] font-semibold tracking-tight text-text">ego-bench</span>
         <button
           onClick={onNew}
-          className="rounded-md bg-accent/10 px-2.5 py-1 text-[12px] font-medium text-accent transition-colors hover:bg-accent/20"
+          className="rounded-full bg-surface-alt px-3 py-1 text-[12px] font-medium text-dim transition-colors hover:bg-border/40"
         >
           + New
         </button>
       </div>
 
-      <div className="h-px bg-border" />
+      <div className="mx-4 h-px bg-border/70" />
 
       <div className="flex-1 overflow-y-auto px-2 py-2">
         {runs.length === 0 && (
@@ -49,10 +49,10 @@ export function Sidebar({
           <button
             key={`run-${i}`}
             onClick={() => onSelect(i)}
-            className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all ${
+            className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-all ${
               activeIndex === i
-                ? "bg-accent/8 text-text shadow-sm ring-1 ring-accent/15"
-                : "text-dim hover:bg-surface-alt"
+                ? "bg-surface-alt text-text"
+                : "text-dim hover:bg-surface-alt/80"
             }`}
           >
             <div className="min-w-0 flex-1">
