@@ -7,7 +7,8 @@ export async function initGPU(): Promise<GPUDevice> {
     );
   }
 
-  const adapter = await navigator.gpu.requestAdapter();
+  const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' })
+    ?? await navigator.gpu.requestAdapter();
   if (!adapter) {
     throw new Error(
       'Failed to obtain a WebGPU adapter. Your GPU may not be supported.'

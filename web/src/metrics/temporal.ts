@@ -51,11 +51,7 @@ export function analyzeTemporalConsistency(frames: FrameMetrics[]): TemporalMetr
   // Duplicate frames: brightness, sharpness, and blur all within 0.1
   let duplicateFrames = 0;
   for (let i = 1; i < frames.length; i++) {
-    if (
-      Math.abs(frames[i].brightness - frames[i - 1].brightness) <= 0.1 &&
-      Math.abs(frames[i].sharpness - frames[i - 1].sharpness) <= 0.1 &&
-      Math.abs(frames[i].blur - frames[i - 1].blur) <= 0.1
-    ) {
+    if (frames[i].frameDiff >= 0 && frames[i].frameDiff <= 1.25) {
       duplicateFrames++;
     }
   }

@@ -1,14 +1,16 @@
 import type { AudioMetrics, FrameMetrics, TemporalMetrics, VideoScore } from "../types.js";
 
 const WEIGHTS = {
-  brightness: 0.15,
-  sharpness: 0.15,
-  blur: 0.15,
-  stability: 0.15,
-  handDetectionRate: 0.20,
+  brightness: 0.13,
+  sharpness: 0.13,
+  blur: 0.13,
+  stability: 0.13,
+  handDetectionRate: 0.14,
   handQuality: 0.05,
+  bodyDetectionRate: 0.08,
+  limbVisibility: 0.08,
   audio: 0.05,
-  temporal: 0.10,
+  temporal: 0.08,
 } as const;
 
 function mean(values: number[]): number {
@@ -43,6 +45,10 @@ export function scoreVideo(
   const handDetectionRate = (handsDetected.length / frameMetrics.length) * 100;
   const avgHandConfidence =
     handsDetected.length > 0 ? mean(handsDetected.map((f) => f.handConfidence)) : 0;
+  const bodyFrames = frameMetrics.filter((f) => f.bodyDetected);
+  const bodyDetectionRate = (bodyFrames.length / frameMetrics.length) * 100;
+  const bodyVisibility = mean(frameMetrics.map((f) => f.bodyVisibility));
+  const limbVisibility = mean(frameMetrics.map((f) => f.limbVisibility));
 
   const audioScore = audio?.overallScore ?? 50;
   const temporalScore = (temporal.consistencyScore + temporal.flickerScore) / 2;
@@ -54,6 +60,8 @@ export function scoreVideo(
     stability * WEIGHTS.stability +
     handDetectionRate * WEIGHTS.handDetectionRate +
     avgHandConfidence * 100 * WEIGHTS.handQuality +
+    bodyDetectionRate * WEIGHTS.bodyDetectionRate +
+    limbVisibility * WEIGHTS.limbVisibility +
     audioScore * WEIGHTS.audio +
     temporalScore * WEIGHTS.temporal;
 
@@ -67,6 +75,9 @@ export function scoreVideo(
       stability,
       handDetectionRate,
       avgHandConfidence,
+      bodyDetectionRate,
+      bodyVisibility,
+      limbVisibility,
     },
     audio,
     temporal,

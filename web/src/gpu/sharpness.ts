@@ -2,11 +2,14 @@
 
 import type { FrameData } from '../types';
 import shaderCode from './shaders/sharpness.wgsl?raw';
+import { toPackedPixels } from './pixel-buffer';
+import { ReusableSingleFrameBuffers } from './buffer-cache';
 
 export class SharpnessMetric {
   private device: GPUDevice;
   private pipeline: GPUComputePipeline;
   private bindGroupLayout: GPUBindGroupLayout;
+  private buffers: ReusableSingleFrameBuffers;
 
   private constructor(
     device: GPUDevice,
@@ -16,6 +19,7 @@ export class SharpnessMetric {
     this.device = device;
     this.pipeline = pipeline;
     this.bindGroupLayout = bindGroupLayout;
+    this.buffers = new ReusableSingleFrameBuffers(device);
   }
 
   static async create(device: GPUDevice): Promise<SharpnessMetric> {
@@ -39,33 +43,14 @@ export class SharpnessMetric {
 
   async compute(frame: FrameData): Promise<number> {
     const pixelCount = frame.width * frame.height;
-    const pixelData = new Uint32Array(new Uint8Array(frame.pixels).buffer);
+    const pixelData = toPackedPixels(frame.pixels);
+    const { uniformBuffer, pixelBuffer, outputBuffer, stagingBuffer } = this.buffers.ensure(
+      pixelCount,
+      8,
+    );
 
-    // Uniform buffer: width, height (2x u32 = 8 bytes)
-    const uniformBuffer = this.device.createBuffer({
-      size: 8,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
     this.device.queue.writeBuffer(uniformBuffer, 0, new Uint32Array([frame.width, frame.height]));
-
-    // Input pixel buffer
-    const pixelBuffer = this.device.createBuffer({
-      size: pixelCount * 4,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
     this.device.queue.writeBuffer(pixelBuffer, 0, pixelData);
-
-    // Output Laplacian buffer
-    const outputBuffer = this.device.createBuffer({
-      size: pixelCount * 4,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
-    });
-
-    // Staging buffer for readback
-    const stagingBuffer = this.device.createBuffer({
-      size: pixelCount * 4,
-      usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-    });
 
     const bindGroup = this.device.createBindGroup({
       layout: this.bindGroupLayout,
@@ -101,16 +86,10 @@ export class SharpnessMetric {
 
     stagingBuffer.unmap();
 
-    // Cleanup per-frame buffers
-    uniformBuffer.destroy();
-    pixelBuffer.destroy();
-    outputBuffer.destroy();
-    stagingBuffer.destroy();
-
     return Math.min(100, variance * 500);
   }
 
   destroy(): void {
-    // Pipeline and bind group layout are lightweight; no explicit destroy needed
+    this.buffers.destroy();
   }
 }

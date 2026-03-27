@@ -2,6 +2,8 @@
 
 import type { FrameData } from '../types';
 import shaderCode from './shaders/optical-flow.wgsl?raw';
+import { toPackedPixels } from './pixel-buffer';
+import { ReusableOpticalFlowBuffers } from './buffer-cache';
 
 const BLOCK_SIZE = 16;
 const SEARCH_RANGE = 4;
@@ -10,6 +12,7 @@ export class OpticalFlowMetric {
   private device: GPUDevice;
   private pipeline: GPUComputePipeline;
   private bindGroupLayout: GPUBindGroupLayout;
+  private buffers: ReusableOpticalFlowBuffers;
 
   private constructor(
     device: GPUDevice,
@@ -19,6 +22,7 @@ export class OpticalFlowMetric {
     this.device = device;
     this.pipeline = pipeline;
     this.bindGroupLayout = bindGroupLayout;
+    this.buffers = new ReusableOpticalFlowBuffers(device);
   }
 
   static async create(device: GPUDevice): Promise<OpticalFlowMetric> {
@@ -43,49 +47,27 @@ export class OpticalFlowMetric {
 
   async compute(current: FrameData, previous: FrameData): Promise<number> {
     const pixelCount = current.width * current.height;
-    const currentData = new Uint32Array(new Uint8Array(current.pixels).buffer);
-    const previousData = new Uint32Array(new Uint8Array(previous.pixels).buffer);
+    const currentData = toPackedPixels(current.pixels);
+    const previousData = toPackedPixels(previous.pixels);
 
     const blocksX = Math.ceil(current.width / BLOCK_SIZE);
     const blocksY = Math.ceil(current.height / BLOCK_SIZE);
     const totalBlocks = blocksX * blocksY;
+    const {
+      uniformBuffer,
+      currentBuffer,
+      previousBuffer,
+      outputBuffer,
+      stagingBuffer,
+    } = this.buffers.ensure(pixelCount, totalBlocks, 16);
 
-    // Uniform buffer: width, height, block_size, search_range (4x u32 = 16 bytes)
-    const uniformBuffer = this.device.createBuffer({
-      size: 16,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
     this.device.queue.writeBuffer(
       uniformBuffer,
       0,
       new Uint32Array([current.width, current.height, BLOCK_SIZE, SEARCH_RANGE])
     );
-
-    // Current frame buffer
-    const currentBuffer = this.device.createBuffer({
-      size: pixelCount * 4,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
     this.device.queue.writeBuffer(currentBuffer, 0, currentData);
-
-    // Previous frame buffer
-    const previousBuffer = this.device.createBuffer({
-      size: pixelCount * 4,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
     this.device.queue.writeBuffer(previousBuffer, 0, previousData);
-
-    // Output motion buffer
-    const outputBuffer = this.device.createBuffer({
-      size: totalBlocks * 4,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
-    });
-
-    // Staging buffer for readback
-    const stagingBuffer = this.device.createBuffer({
-      size: totalBlocks * 4,
-      usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-    });
 
     const bindGroup = this.device.createBindGroup({
       layout: this.bindGroupLayout,
@@ -118,18 +100,11 @@ export class OpticalFlowMetric {
 
     stagingBuffer.unmap();
 
-    // Cleanup per-frame buffers
-    uniformBuffer.destroy();
-    currentBuffer.destroy();
-    previousBuffer.destroy();
-    outputBuffer.destroy();
-    stagingBuffer.destroy();
-
     // Convert to stability score: 0 motion = 100, 10+ pixels motion = 0
     return Math.max(0, Math.min(100, 100 - meanMotion * 10));
   }
 
   destroy(): void {
-    // Pipeline and bind group layout are lightweight; no explicit destroy needed
+    this.buffers.destroy();
   }
 }

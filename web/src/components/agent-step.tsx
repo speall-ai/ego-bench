@@ -17,14 +17,14 @@ export function AgentStep({ step, index }: { step: Step; index: number }) {
       transition={reduced ? { duration: 0 } : { duration: 0.15, delay: index * 0.02 }}
       className="flex items-baseline gap-2.5 py-[3px]"
     >
-      <span className="text-[11px] text-muted">
+      <span className="text-[13px] text-muted">
         {step.status === "running" ? "·" : step.status === "done" ? "·" : "×"}
       </span>
-      <span className={`text-[12px] ${step.status === "done" ? "text-muted" : "text-dim"}`}>
+      <span className={`text-[14px] ${step.status === "done" ? "text-muted" : "text-dim"}`}>
         {step.label}
       </span>
       {step.result && step.status === "done" && (
-        <span className="text-[11px] text-muted">{step.result}</span>
+        <span className="text-[13px] text-muted">{step.result}</span>
       )}
     </motion.div>
   );

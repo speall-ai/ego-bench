@@ -5,14 +5,38 @@ export interface FrameData {
   timestamp: number; // seconds into the video
 }
 
+export interface LandmarkPoint {
+  x: number;
+  y: number;
+  visibility: number;
+}
+
+export interface FrameBodyMap {
+  poseLandmarks: LandmarkPoint[];
+  leftHandLandmarks: LandmarkPoint[];
+  rightHandLandmarks: LandmarkPoint[];
+}
+
 export interface FrameMetrics {
+  timestamp: number; // seconds into the video
   brightness: number; // 0-100
   sharpness: number; // 0-100
   blur: number; // 0-100 (100 = no blur)
   stability: number; // 0-100 (100 = perfectly stable), -1 for first frame
+  frameDiff: number; // 0-100, -1 for first frame
+  lumaHistogram: number[]; // 16 bins, percentages summing to ~100
   handDetected: boolean;
   handConfidence: number; // 0-1
   handLandmarkCount: number;
+  bodyDetected: boolean;
+  bodyLandmarkCount: number;
+  bodyVisibility: number; // 0-100
+  limbVisibility: number; // 0-100
+}
+
+export interface FramePreview {
+  src: string;
+  timestamp: number;
 }
 
 export interface AudioMetrics {
@@ -40,6 +64,9 @@ export interface VideoScore {
     stability: number;
     handDetectionRate: number;
     avgHandConfidence: number;
+    bodyDetectionRate: number;
+    bodyVisibility: number;
+    limbVisibility: number;
   };
   audio: AudioMetrics | null;
   temporal: TemporalMetrics;

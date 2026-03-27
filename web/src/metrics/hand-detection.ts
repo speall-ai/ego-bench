@@ -2,15 +2,35 @@ import { FilesetResolver, HandLandmarker } from "@mediapipe/tasks-vision";
 import type { FrameData } from "../types.js";
 
 const WASM_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
-const MODEL_URL =
-  "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task";
+const MODEL_CANDIDATES = [
+  {
+    label: "balanced gpu",
+    modelAssetPath:
+      "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task",
+    delegate: "GPU" as const,
+  },
+  {
+    label: "balanced cpu",
+    modelAssetPath:
+      "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task",
+    delegate: "CPU" as const,
+  },
+  {
+    label: "precision cpu",
+    modelAssetPath:
+      "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float32/latest/hand_landmarker.task",
+    delegate: "CPU" as const,
+  },
+] as const;
 
 export class HandDetector {
+  readonly modelLabel: string;
   private landmarker: HandLandmarker;
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
 
-  private constructor(landmarker: HandLandmarker) {
+  private constructor(landmarker: HandLandmarker, modelLabel: string) {
+    this.modelLabel = modelLabel;
     this.landmarker = landmarker;
     this.canvas = document.createElement("canvas");
     this.ctx = this.canvas.getContext("2d")!;
@@ -18,15 +38,27 @@ export class HandDetector {
 
   static async create(): Promise<HandDetector> {
     const vision = await FilesetResolver.forVisionTasks(WASM_CDN);
-    const landmarker = await HandLandmarker.createFromOptions(vision, {
-      baseOptions: {
-        modelAssetPath: MODEL_URL,
-        delegate: "GPU",
-      },
-      runningMode: "IMAGE",
-      numHands: 2,
-    });
-    return new HandDetector(landmarker);
+    let lastError: unknown = null;
+
+    for (const candidate of MODEL_CANDIDATES) {
+      try {
+        const landmarker = await HandLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: candidate.modelAssetPath,
+            delegate: candidate.delegate,
+          },
+          runningMode: "IMAGE",
+          numHands: 2,
+        });
+        return new HandDetector(landmarker, candidate.label);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError instanceof Error
+      ? lastError
+      : new Error("Unable to load a supported hand model");
   }
 
   detect(frame: FrameData): {

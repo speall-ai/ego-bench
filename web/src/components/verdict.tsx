@@ -12,12 +12,12 @@ export function Verdict({ score }: { score: VideoScore }) {
       className="space-y-3"
     >
       <div className="flex items-baseline gap-2">
-        <span className="text-3xl font-semibold tabular-nums text-text">
+        <span className="text-[32px] font-semibold tabular-nums text-text">
           {score.overallScore.toFixed(1)}
         </span>
-        <span className="text-[12px] text-muted">{score.grade}</span>
+        <span className="text-[14px] text-muted">{score.grade}</span>
       </div>
-      <p className="text-[12px] text-dim leading-relaxed max-w-sm">
+      <p className="max-w-sm text-[14px] leading-relaxed text-dim">
         {verdict(score)}
       </p>
     </motion.div>
@@ -26,13 +26,15 @@ export function Verdict({ score }: { score: VideoScore }) {
 
 function verdict(s: VideoScore): string {
   const p: string[] = [];
-  if (s.overallScore >= 80) p.push("solid.");
-  else if (s.overallScore >= 60) p.push("decent, few things.");
-  else p.push("rough.");
-  if (s.metrics.stability < 40) p.push("shaky.");
-  if (s.metrics.sharpness < 30) p.push("soft.");
-  if (s.metrics.brightness < 30) p.push("dark.");
-  if (s.metrics.handDetectionRate < 30) p.push("hands missing.");
-  if (s.temporal.qualityDrops > 2) p.push(`${s.temporal.qualityDrops} drops.`);
+  if (s.overallScore >= 80) p.push("overall, this looks strong.");
+  else if (s.overallScore >= 60) p.push("overall, this is in a workable place.");
+  else p.push("there is a good base here, with a few areas worth refining.");
+  if (s.metrics.stability < 40) p.push("camera motion is a bit noticeable.");
+  if (s.metrics.sharpness < 30) p.push("focus softens in places.");
+  if (s.metrics.brightness < 30) p.push("some frames are darker than ideal.");
+  if (s.metrics.handDetectionRate < 30) p.push("hands are only visible intermittently.");
+  if (s.metrics.bodyDetectionRate < 40) p.push("full limb mapping only holds in parts of the clip.");
+  else if (s.metrics.limbVisibility < 45) p.push("some arm or leg landmarks drop out through motion or framing.");
+  if (s.temporal.qualityDrops > 2) p.push(`${s.temporal.qualityDrops} brief quality dips show up.`);
   return p.join(" ");
 }

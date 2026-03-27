@@ -23,8 +23,13 @@ export function exportCSV(score: VideoScore): void {
     "sharpness",
     "blur",
     "stability",
+    "frame_diff",
     "hand_detected",
     "hand_confidence",
+    "body_detected",
+    "body_visibility",
+    "limb_visibility",
+    "body_landmark_count",
   ];
 
   const rows: string[] = [headers.join(",")];
@@ -34,13 +39,18 @@ export function exportCSV(score: VideoScore): void {
     rows.push(
       [
         i,
-        "",
+        f.timestamp.toFixed(3),
         f.brightness.toFixed(2),
         f.sharpness.toFixed(2),
         f.blur.toFixed(2),
         f.stability.toFixed(2),
+        f.frameDiff.toFixed(2),
         f.handDetected ? "true" : "false",
         f.handConfidence.toFixed(4),
+        f.bodyDetected ? "true" : "false",
+        f.bodyVisibility.toFixed(2),
+        f.limbVisibility.toFixed(2),
+        String(f.bodyLandmarkCount),
       ].join(","),
     );
   }
@@ -54,8 +64,13 @@ export function exportCSV(score: VideoScore): void {
       score.metrics.sharpness.toFixed(2),
       score.metrics.blur.toFixed(2),
       score.metrics.stability.toFixed(2),
+      "",
       `${score.metrics.handDetectionRate.toFixed(2)}%`,
       score.metrics.avgHandConfidence.toFixed(4),
+      `${score.metrics.bodyDetectionRate.toFixed(2)}%`,
+      score.metrics.bodyVisibility.toFixed(2),
+      score.metrics.limbVisibility.toFixed(2),
+      "",
     ].join(","),
   );
 

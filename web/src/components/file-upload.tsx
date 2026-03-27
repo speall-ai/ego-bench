@@ -57,11 +57,11 @@ export function FileUpload({ onFileSelected }: FileUploadProps) {
         </motion.svg>
 
         <AnimatePresence initial={false} mode="wait">
-          <motion.p key={over ? "drop" : "idle"} initial={reduced ? { opacity: 0 } : { opacity: 0, y: 3 }} animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }} exit={reduced ? { opacity: 0 } : { opacity: 0, y: -3 }} transition={reduced ? { duration: 0 } : { duration: 0.12 }} className="text-[13px] text-dim">
+          <motion.p key={over ? "drop" : "idle"} initial={reduced ? { opacity: 0 } : { opacity: 0, y: 3 }} animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }} exit={reduced ? { opacity: 0 } : { opacity: 0, y: -3 }} transition={reduced ? { duration: 0 } : { duration: 0.12 }} className="text-[15px] text-dim">
             {over ? "drop here" : "drop video or click"}
           </motion.p>
         </AnimatePresence>
-        <p className="mt-1 text-[11px] text-muted">mp4, webm, mov · runs locally</p>
+        <p className="mt-1 text-[13px] text-muted">mp4, webm, mov · runs locally</p>
       </motion.div>
 
       <AnimatePresence>
@@ -71,8 +71,8 @@ export function FileUpload({ onFileSelected }: FileUploadProps) {
               <path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] text-dim">{file.name}</p>
-              <p className="text-[11px] text-muted">{formatSize(file.size)}</p>
+              <p className="truncate text-[14px] text-dim">{file.name}</p>
+              <p className="text-[13px] text-muted">{formatSize(file.size)}</p>
             </div>
           </motion.div>
         )}
