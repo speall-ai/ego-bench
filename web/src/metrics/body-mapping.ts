@@ -1,11 +1,11 @@
 import { FilesetResolver, HolisticLandmarker } from "@mediapipe/tasks-vision";
 import type { FrameBodyMap, FrameData, LandmarkPoint, LimbScores } from "../types.js";
+import {
+  HOLISTIC_LANDMARKER_MODEL_URL,
+  MEDIAPIPE_WASM_ROOT,
+} from "../runtime-assets.js";
 import { createLandmarkPostProcessor } from "../wasm/landmark-postprocess.js";
 import { computeLimbScores, emptyLimbScores } from "./limb-labeling.js";
-
-const WASM_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
-const MODEL_ASSET_PATH =
-  "https://storage.googleapis.com/mediapipe-models/holistic_landmarker/holistic_landmarker/float16/latest/holistic_landmarker.task";
 
 const MODEL_CANDIDATES = [
   { label: "holistic gpu", delegate: "GPU" as const },
@@ -70,7 +70,7 @@ export class BodyMapper {
   }
 
   static async create(): Promise<BodyMapper> {
-    const vision = await FilesetResolver.forVisionTasks(WASM_CDN);
+    const vision = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_ROOT);
     let lastError: unknown = null;
 
     for (const candidate of MODEL_CANDIDATES) {
@@ -78,7 +78,7 @@ export class BodyMapper {
         const postProcessor = await createLandmarkPostProcessor();
         const landmarker = await HolisticLandmarker.createFromOptions(vision, {
           baseOptions: {
-            modelAssetPath: MODEL_ASSET_PATH,
+            modelAssetPath: HOLISTIC_LANDMARKER_MODEL_URL,
             delegate: candidate.delegate,
           },
           runningMode: "IMAGE",

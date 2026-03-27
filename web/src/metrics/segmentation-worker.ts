@@ -1,35 +1,35 @@
 /// <reference lib="webworker" />
 
 import { FilesetResolver, ImageSegmenter } from "@mediapipe/tasks-vision";
+import {
+  IMAGE_SEGMENTER_LANDSCAPE_MODEL_URL,
+  IMAGE_SEGMENTER_MULTICLASS_MODEL_URL,
+  MEDIAPIPE_WASM_ROOT,
+} from "../runtime-assets.js";
 import type { SegmentationMetrics } from "../types.js";
 
-const WASM_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
 const MODEL_CANDIDATES = [
   {
     label: "selfie multiclass cpu",
-    modelAssetPath:
-      "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite",
+    modelAssetPath: IMAGE_SEGMENTER_MULTICLASS_MODEL_URL,
     delegate: "CPU" as const,
     labels: ["background", "hair", "body-skin", "face-skin", "clothes", "others"],
   },
   {
     label: "selfie segmenter landscape cpu",
-    modelAssetPath:
-      "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter_landscape/float16/latest/selfie_segmenter_landscape.tflite",
+    modelAssetPath: IMAGE_SEGMENTER_LANDSCAPE_MODEL_URL,
     delegate: "CPU" as const,
     labels: ["background", "person"],
   },
   {
     label: "selfie multiclass gpu",
-    modelAssetPath:
-      "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite",
+    modelAssetPath: IMAGE_SEGMENTER_MULTICLASS_MODEL_URL,
     delegate: "GPU" as const,
     labels: ["background", "hair", "body-skin", "face-skin", "clothes", "others"],
   },
   {
     label: "selfie segmenter landscape gpu",
-    modelAssetPath:
-      "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter_landscape/float16/latest/selfie_segmenter_landscape.tflite",
+    modelAssetPath: IMAGE_SEGMENTER_LANDSCAPE_MODEL_URL,
     delegate: "GPU" as const,
     labels: ["background", "person"],
   },
@@ -136,7 +136,7 @@ function analyzeCategoryMask(
 }
 
 async function init(): Promise<ReadyResponse> {
-  const vision = await FilesetResolver.forVisionTasks(WASM_CDN);
+  const vision = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_ROOT);
   let lastError: unknown = null;
 
   for (const candidate of MODEL_CANDIDATES) {

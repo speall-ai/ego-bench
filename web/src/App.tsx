@@ -125,7 +125,7 @@ export default function App() {
     let audioP: Promise<AudioMetrics | null> | null = null;
 
     try {
-      add("gpu", "gpu");
+      add("gpu", "Initialize GPU");
       device = await initGPU();
       done("gpu");
 

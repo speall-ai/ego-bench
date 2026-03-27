@@ -9,6 +9,16 @@ interface TopBarProps {
   result: VideoScore | null;
 }
 
+function gradePillColor(grade: string): string {
+  switch (grade) {
+    case "A": return "bg-success-muted text-success";
+    case "B": return "bg-accent-muted text-accent";
+    case "C": return "bg-warning-muted text-warning";
+    case "D": return "bg-danger-muted text-danger";
+    default: return "bg-danger-muted text-danger";
+  }
+}
+
 export function TopBar({ name, canRename, onRename, result }: TopBarProps) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
@@ -35,8 +45,8 @@ export function TopBar({ name, canRename, onRename, result }: TopBarProps) {
   }
 
   return (
-    <div className="flex h-10 items-center justify-between border-b border-border px-6">
-      <div className="min-w-0 flex flex-1 items-center">
+    <div className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-surface/95 px-6 backdrop-blur-sm">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         {editing ? (
           <input
             ref={inputRef}
@@ -47,35 +57,44 @@ export function TopBar({ name, canRename, onRename, result }: TopBarProps) {
               if (e.key === "Enter") commit();
               if (e.key === "Escape") setEditing(false);
             }}
-            className="w-full max-w-xs appearance-none bg-transparent p-0 text-[15px] text-text outline-none focus-visible:outline-none"
+            className="w-full max-w-xs appearance-none bg-transparent p-0 text-[15px] font-medium text-text outline-none focus-visible:outline-none"
           />
         ) : canRename ? (
           <button
             onClick={startEdit}
-            className="truncate text-[15px] text-dim transition-colors hover:text-text"
+            className="group flex items-center gap-1.5 truncate text-[15px] font-medium text-dim transition-colors hover:text-text"
           >
-            {name ?? "ego-bench"}
+            <span className="truncate">{name ?? "ego-bench"}</span>
+            <svg className="h-3.5 w-3.5 text-muted opacity-0 transition-opacity group-hover:opacity-100" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487z" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         ) : (
           <span className="truncate text-[15px] text-muted">
             {name ?? "ego-bench"}
           </span>
         )}
+
+        {result && (
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${gradePillColor(result.grade)}`}>
+            {result.grade} · {result.overallScore.toFixed(1)}
+          </span>
+        )}
       </div>
 
       {result && (
-        <div className="ml-4 flex items-center gap-4">
+        <div className="ml-4 flex items-center gap-2">
           <button
             onClick={() => exportJSON(result)}
-            className="text-[15px] text-muted transition-colors hover:text-text"
+            className="rounded-md border border-border bg-surface px-3 py-1.5 text-[13px] text-dim transition-colors hover:border-muted hover:text-text"
           >
-            export json
+            JSON
           </button>
           <button
             onClick={() => exportCSV(result)}
-            className="text-[15px] text-muted transition-colors hover:text-text"
+            className="rounded-md border border-border bg-surface px-3 py-1.5 text-[13px] text-dim transition-colors hover:border-muted hover:text-text"
           >
-            export csv
+            CSV
           </button>
         </div>
       )}

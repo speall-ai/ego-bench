@@ -1,24 +1,16 @@
 import { FilesetResolver, HandLandmarker } from "@mediapipe/tasks-vision";
 import type { FrameData } from "../types.js";
+import { HAND_LANDMARKER_MODEL_URL, MEDIAPIPE_WASM_ROOT } from "../runtime-assets.js";
 
-const WASM_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
 const MODEL_CANDIDATES = [
   {
     label: "balanced gpu",
-    modelAssetPath:
-      "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task",
+    modelAssetPath: HAND_LANDMARKER_MODEL_URL,
     delegate: "GPU" as const,
   },
   {
     label: "balanced cpu",
-    modelAssetPath:
-      "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task",
-    delegate: "CPU" as const,
-  },
-  {
-    label: "precision cpu",
-    modelAssetPath:
-      "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float32/latest/hand_landmarker.task",
+    modelAssetPath: HAND_LANDMARKER_MODEL_URL,
     delegate: "CPU" as const,
   },
 ] as const;
@@ -37,7 +29,7 @@ export class HandDetector {
   }
 
   static async create(): Promise<HandDetector> {
-    const vision = await FilesetResolver.forVisionTasks(WASM_CDN);
+    const vision = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_ROOT);
     let lastError: unknown = null;
 
     for (const candidate of MODEL_CANDIDATES) {
