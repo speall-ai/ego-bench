@@ -175,6 +175,7 @@ export default function App() {
           : { global: -1, action: -1, peripheral: -1 };
         let hDet = false, bothHands = false, hConf = 0, hLm = 0, interactionZoneCoverage = 0;
         let bodyDet = false, bodyLm = 0, bodyVis = 0, limbVis = 0;
+        let limbScores = { torso: 0, leftArm: 0, rightArm: 0, leftLeg: 0, rightLeg: 0 };
         let bodyMap = null;
         if (mapper) {
           const mapping = mapper.detect(fr);
@@ -187,6 +188,7 @@ export default function App() {
           bodyLm = mapping.bodyLandmarkCount;
           bodyVis = mapping.bodyVisibility;
           limbVis = mapping.limbVisibility;
+          limbScores = mapping.limbScores;
           bodyMap = mapping.map;
         }
         if (previewRenderer) {
@@ -213,6 +215,7 @@ export default function App() {
           bodyLandmarkCount: bodyLm,
           bodyVisibility: bodyVis,
           limbVisibility: limbVis,
+          limbScores,
         });
 
         if (i > 0) {

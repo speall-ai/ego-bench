@@ -35,6 +35,11 @@ export function exportCSV(score: VideoScore): void {
     "body_detected",
     "body_visibility",
     "limb_visibility",
+    "torso_visibility",
+    "left_arm_visibility",
+    "right_arm_visibility",
+    "left_leg_visibility",
+    "right_leg_visibility",
     "body_landmark_count",
   ];
 
@@ -62,6 +67,11 @@ export function exportCSV(score: VideoScore): void {
         f.bodyDetected ? "true" : "false",
         f.bodyVisibility.toFixed(2),
         f.limbVisibility.toFixed(2),
+        f.limbScores.torso.toFixed(2),
+        f.limbScores.leftArm.toFixed(2),
+        f.limbScores.rightArm.toFixed(2),
+        f.limbScores.leftLeg.toFixed(2),
+        f.limbScores.rightLeg.toFixed(2),
         String(f.bodyLandmarkCount),
       ].join(","),
     );
@@ -88,6 +98,11 @@ export function exportCSV(score: VideoScore): void {
       `${score.metrics.bodyDetectionRate.toFixed(2)}%`,
       score.metrics.bodyVisibility.toFixed(2),
       score.metrics.limbVisibility.toFixed(2),
+      score.metrics.limbScores.torso.toFixed(2),
+      score.metrics.limbScores.leftArm.toFixed(2),
+      score.metrics.limbScores.rightArm.toFixed(2),
+      score.metrics.limbScores.leftLeg.toFixed(2),
+      score.metrics.limbScores.rightLeg.toFixed(2),
       "",
     ].join(","),
   );

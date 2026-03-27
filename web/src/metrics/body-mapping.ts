@@ -1,6 +1,7 @@
 import { FilesetResolver, HolisticLandmarker } from "@mediapipe/tasks-vision";
-import type { FrameBodyMap, FrameData, LandmarkPoint } from "../types.js";
+import type { FrameBodyMap, FrameData, LandmarkPoint, LimbScores } from "../types.js";
 import { createLandmarkPostProcessor } from "../wasm/landmark-postprocess.js";
+import { computeLimbScores, emptyLimbScores } from "./limb-labeling.js";
 
 const WASM_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
 const MODEL_ASSET_PATH =
@@ -109,6 +110,7 @@ export class BodyMapper {
     bodyLandmarkCount: number;
     bodyVisibility: number;
     limbVisibility: number;
+    limbScores: LimbScores;
     map: FrameBodyMap | null;
   } {
     this.canvas.width = frame.width;
@@ -126,6 +128,7 @@ export class BodyMapper {
       rightHandLandmarks: toPoints(results.rightHandLandmarks[0]),
     });
     const handCoverage = analyzeHandCoverage(processed.map);
+    const limbScores = processed.bodyDetected ? computeLimbScores(processed.map) : emptyLimbScores();
 
     return {
       handDetected: processed.handDetected,
@@ -137,6 +140,7 @@ export class BodyMapper {
       bodyLandmarkCount: processed.bodyLandmarkCount,
       bodyVisibility: processed.bodyVisibility,
       limbVisibility: processed.limbVisibility,
+      limbScores,
       map: processed.bodyDetected || processed.handDetected ? processed.map : null,
     };
   }

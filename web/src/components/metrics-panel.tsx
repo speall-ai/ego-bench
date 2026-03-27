@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import type { FramePreview, VideoScore } from "@/types";
+import type { FramePreview, LimbScores, VideoScore } from "@/types";
+import { LIMB_DEFINITIONS } from "@/metrics/limb-labeling";
 
 function Row({ label, value, pct }: { label: string; value: string; pct: number }) {
   const reduced = useReducedMotion();
@@ -66,6 +67,48 @@ function Histogram({ bins }: { bins: number[] }) {
         <span>shadows</span>
         <span>highlights</span>
       </div>
+    </div>
+  );
+}
+
+function limbTone(score: number): string {
+  if (score >= 72) return "strong";
+  if (score >= 45) return "partial";
+  return "weak";
+}
+
+function LimbMatrix({ scores }: { scores: LimbScores }) {
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {LIMB_DEFINITIONS.map((limb) => {
+        const score = scores[limb.key];
+        return (
+          <div
+            key={limb.key}
+            className="rounded-[14px] border border-border bg-bg px-3 py-2.5"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[11px] uppercase tracking-[0.08em] text-muted">
+                {limb.label}
+              </span>
+              <span className="text-[11px] text-muted">
+                {limbTone(score)}
+              </span>
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-border">
+                <div
+                  className="h-full rounded-full bg-text transition-[width] duration-300 ease-out"
+                  style={{ width: `${Math.max(4, Math.min(100, score))}%` }}
+                />
+              </div>
+              <span className="w-8 text-right text-[12px] tabular-nums text-text">
+                {score.toFixed(0)}
+              </span>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -140,6 +183,11 @@ function FramesSection({
         <div className="mt-3">
           <div className="mb-1 text-[10px] uppercase tracking-[0.08em] text-muted">luma spread</div>
           <Histogram bins={activeFrame.lumaHistogram} />
+        </div>
+
+        <div className="mt-3">
+          <div className="mb-2 text-[10px] uppercase tracking-[0.08em] text-muted">limb map</div>
+          <LimbMatrix scores={activeFrame.limbScores} />
         </div>
       </div>
 
@@ -234,6 +282,10 @@ export function MetricsPanel({ score, previews = [] }: { score: VideoScore; prev
         value={metrics.limbVisibility.toFixed(0)}
         pct={metrics.limbVisibility}
       />
+
+      <Toggle label="limb map">
+        <LimbMatrix scores={metrics.limbScores} />
+      </Toggle>
 
       {audio && (
         <Toggle label="audio">
@@ -366,6 +418,11 @@ function DetailedSection({ score }: { score: VideoScore }) {
           ({metrics.bodyDetectionRate.toFixed(1)}%).
           average body visibility: {metrics.bodyVisibility.toFixed(1)}.
           average limb visibility: {metrics.limbVisibility.toFixed(1)}.
+          torso: {metrics.limbScores.torso.toFixed(1)}.
+          left arm: {metrics.limbScores.leftArm.toFixed(1)}.
+          right arm: {metrics.limbScores.rightArm.toFixed(1)}.
+          left leg: {metrics.limbScores.leftLeg.toFixed(1)}.
+          right leg: {metrics.limbScores.rightLeg.toFixed(1)}.
           hands were still visible in {handFrames.length} of {perFrame.length} frames
           ({metrics.handDetectionRate.toFixed(1)}%).
           {handFrames.length > 0 && (

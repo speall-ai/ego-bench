@@ -1,5 +1,6 @@
 import { HolisticLandmarker } from "@mediapipe/tasks-vision";
 import type { FrameBodyMap, FrameData, FramePreview, LandmarkPoint } from "@/types";
+import { computeLimbScores, renderableLimbLabels } from "@/metrics/limb-labeling";
 
 const PREVIEW_MAX_WIDTH = 192;
 const PREVIEW_QUALITY = 0.72;
@@ -64,6 +65,7 @@ export class FramePreviewRenderer {
   }
 
   private drawMap(bodyMap: FrameBodyMap, width: number, height: number): void {
+    const limbScores = computeLimbScores(bodyMap);
     this.drawConnections(bodyMap.poseLandmarks, POSE_CONNECTIONS, width, height, 2.1);
     this.drawConnections(bodyMap.leftHandLandmarks, HAND_CONNECTIONS, width, height, 1.6);
     this.drawConnections(bodyMap.rightHandLandmarks, HAND_CONNECTIONS, width, height, 1.6);
@@ -71,6 +73,7 @@ export class FramePreviewRenderer {
     this.drawPoints(bodyMap.poseLandmarks, width, height, 2.3);
     this.drawPoints(bodyMap.leftHandLandmarks, width, height, 1.7);
     this.drawPoints(bodyMap.rightHandLandmarks, width, height, 1.7);
+    this.drawLimbLabels(renderableLimbLabels(bodyMap, limbScores), width, height);
   }
 
   private drawConnections(
@@ -138,6 +141,51 @@ export class FramePreviewRenderer {
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(255, 255, 255, ${0.92 * alpha})`;
       ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  private drawLimbLabels(
+    labels: Array<{ label: string; score: number; x: number; y: number }>,
+    width: number,
+    height: number,
+  ): void {
+    if (labels.length === 0) return;
+
+    const ctx = this.previewCtx;
+    ctx.save();
+    ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif';
+    ctx.textBaseline = "middle";
+
+    for (const label of labels) {
+      const text = `${label.label} ${Math.round(label.score)}`;
+      const textWidth = ctx.measureText(text).width;
+      const pillWidth = textWidth + 14;
+      const pillHeight = 18;
+      const x = Math.min(width - pillWidth - 4, Math.max(4, label.x * width - pillWidth / 2));
+      const y = Math.min(height - pillHeight - 4, Math.max(4, label.y * height - pillHeight / 2));
+      const radius = 9;
+
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + pillWidth - radius, y);
+      ctx.quadraticCurveTo(x + pillWidth, y, x + pillWidth, y + radius);
+      ctx.lineTo(x + pillWidth, y + pillHeight - radius);
+      ctx.quadraticCurveTo(x + pillWidth, y + pillHeight, x + pillWidth - radius, y + pillHeight);
+      ctx.lineTo(x + radius, y + pillHeight);
+      ctx.quadraticCurveTo(x, y + pillHeight, x, y + pillHeight - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.18)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(0, 0, 0, 0.88)";
+      ctx.fillText(text, x + 7, y + pillHeight / 2 + 0.5);
     }
 
     ctx.restore();

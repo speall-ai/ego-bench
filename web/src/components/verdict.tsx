@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from "motion/react";
 import type { VideoScore } from "@/types";
+import { weakestLimb } from "@/metrics/limb-labeling";
 
 export function Verdict({ score }: { score: VideoScore }) {
   const reduced = useReducedMotion();
@@ -26,6 +27,7 @@ export function Verdict({ score }: { score: VideoScore }) {
 
 function verdict(s: VideoScore): string {
   const p: string[] = [];
+  const weakest = weakestLimb(s.metrics.limbScores);
   if (s.overallScore >= 80) p.push("overall, this looks strong.");
   else if (s.overallScore >= 60) p.push("overall, this is in a workable place.");
   else p.push("there is a good base here, with a few areas worth refining.");
@@ -39,6 +41,7 @@ function verdict(s: VideoScore): string {
   if (s.metrics.bimanualRate < 20) p.push("both hands are not visible together very often.");
   if (s.metrics.bodyDetectionRate < 40) p.push("full limb mapping only holds in parts of the clip.");
   else if (s.metrics.limbVisibility < 45) p.push("some arm or leg landmarks drop out through motion or framing.");
+  if (weakest.score < 42) p.push(`${weakest.label} tracking is the weakest limb signal right now.`);
   if (s.temporal.shotChanges > 0) p.push(`${s.temporal.shotChanges} strong scene transitions or cuts show up.`);
   if (s.temporal.qualityDrops > 2) p.push(`${s.temporal.qualityDrops} brief quality dips show up.`);
   return p.join(" ");

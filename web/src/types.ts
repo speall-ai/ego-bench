@@ -11,6 +11,14 @@ export interface LandmarkPoint {
   visibility: number;
 }
 
+export interface LimbScores {
+  torso: number;
+  leftArm: number;
+  rightArm: number;
+  leftLeg: number;
+  rightLeg: number;
+}
+
 export interface FrameBodyMap {
   poseLandmarks: LandmarkPoint[];
   leftHandLandmarks: LandmarkPoint[];
@@ -38,6 +46,7 @@ export interface FrameMetrics {
   bodyLandmarkCount: number;
   bodyVisibility: number; // 0-100
   limbVisibility: number; // 0-100
+  limbScores: LimbScores;
 }
 
 export interface FramePreview {
@@ -79,6 +88,7 @@ export interface VideoScore {
     bodyDetectionRate: number;
     bodyVisibility: number;
     limbVisibility: number;
+    limbScores: LimbScores;
     shadowClip: number;
     highlightClip: number;
     exposureIntegrity: number;

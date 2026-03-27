@@ -1,4 +1,5 @@
 import type { AudioMetrics, FrameMetrics, TemporalMetrics, VideoScore } from "../types.js";
+import { emptyLimbScores } from "./limb-labeling.js";
 
 const WEIGHTS = {
   brightness: 0.1,
@@ -36,6 +37,17 @@ function exposureIntegrityScore(shadowClip: number, highlightClip: number): numb
   return Math.max(0, 100 - weightedClip * 2.5);
 }
 
+function meanLimbScores(frameMetrics: FrameMetrics[]) {
+  if (frameMetrics.length === 0) return emptyLimbScores();
+  return {
+    torso: mean(frameMetrics.map((f) => f.limbScores.torso)),
+    leftArm: mean(frameMetrics.map((f) => f.limbScores.leftArm)),
+    rightArm: mean(frameMetrics.map((f) => f.limbScores.rightArm)),
+    leftLeg: mean(frameMetrics.map((f) => f.limbScores.leftLeg)),
+    rightLeg: mean(frameMetrics.map((f) => f.limbScores.rightLeg)),
+  };
+}
+
 export function scoreVideo(
   filename: string,
   frameMetrics: FrameMetrics[],
@@ -65,6 +77,7 @@ export function scoreVideo(
   const bodyDetectionRate = (bodyFrames.length / frameMetrics.length) * 100;
   const bodyVisibility = mean(frameMetrics.map((f) => f.bodyVisibility));
   const limbVisibility = mean(frameMetrics.map((f) => f.limbVisibility));
+  const limbScores = meanLimbScores(frameMetrics);
   const shadowClip = mean(frameMetrics.map((f) => f.shadowClip));
   const highlightClip = mean(frameMetrics.map((f) => f.highlightClip));
   const exposureIntegrity = exposureIntegrityScore(shadowClip, highlightClip);
@@ -105,6 +118,7 @@ export function scoreVideo(
       bodyDetectionRate,
       bodyVisibility,
       limbVisibility,
+      limbScores,
       shadowClip,
       highlightClip,
       exposureIntegrity,
