@@ -5,8 +5,10 @@ export function analyzeTemporalConsistency(frames: FrameMetrics[]): TemporalMetr
     return {
       consistencyScore: 100,
       flickerScore: 100,
+      motionJerkScore: 100,
       qualityDrops: 0,
       duplicateFrames: 0,
+      shotChanges: 0,
     };
   }
 
@@ -34,6 +36,16 @@ export function analyzeTemporalConsistency(frames: FrameMetrics[]): TemporalMetr
   }
   const flickerScore = Math.max(0, 100 - (flickerCount / (frames.length - 2)) * 200);
 
+  let jerkTotal = 0;
+  let jerkSamples = 0;
+  for (let i = 2; i < frames.length; i++) {
+    if (frames[i - 1].peripheralMotion < 0 || frames[i].peripheralMotion < 0) continue;
+    jerkTotal += Math.abs(frames[i].peripheralMotion - frames[i - 1].peripheralMotion);
+    jerkSamples++;
+  }
+  const motionJerkScore =
+    jerkSamples > 0 ? Math.max(0, 100 - (jerkTotal / jerkSamples) * 3) : 100;
+
   // Quality drops: sharpness drops > 20 from running average of previous 5 frames
   let qualityDrops = 0;
   for (let i = 1; i < frames.length; i++) {
@@ -56,10 +68,19 @@ export function analyzeTemporalConsistency(frames: FrameMetrics[]): TemporalMetr
     }
   }
 
+  let shotChanges = 0;
+  for (let i = 1; i < frames.length; i++) {
+    if (frames[i].frameDiff > 18 && frames[i].peripheralMotion > 16) {
+      shotChanges++;
+    }
+  }
+
   return {
     consistencyScore: Math.round(consistencyScore * 100) / 100,
     flickerScore: Math.round(flickerScore * 100) / 100,
+    motionJerkScore: Math.round(motionJerkScore * 100) / 100,
     qualityDrops,
     duplicateFrames,
+    shotChanges,
   };
 }

@@ -85,6 +85,8 @@ function FramesSection({
 
   if (!activeFrame) return null;
 
+  const combinedClip = activeFrame.shadowClip + activeFrame.highlightClip;
+
   return (
     <div className="space-y-3">
       <div className="rounded-[18px] border border-border bg-surface p-3">
@@ -120,10 +122,13 @@ function FramesSection({
             ["bright", activeFrame.brightness.toFixed(0)],
             ["sharp", activeFrame.sharpness.toFixed(0)],
             ["clarity", activeFrame.blur.toFixed(0)],
-            ["stable", activeFrame.stability >= 0 ? activeFrame.stability.toFixed(0) : "—"],
             ["motion", activeFrame.frameDiff >= 0 ? activeFrame.frameDiff.toFixed(1) : "—"],
-            ["body", activeFrame.bodyDetected ? activeFrame.bodyVisibility.toFixed(0) : "—"],
+            ["action", activeFrame.actionMotion >= 0 ? activeFrame.actionMotion.toFixed(1) : "—"],
+            ["edge", activeFrame.peripheralMotion >= 0 ? activeFrame.peripheralMotion.toFixed(1) : "—"],
+            ["zone", activeFrame.interactionZoneCoverage.toFixed(0)],
+            ["clip", combinedClip.toFixed(1)],
             ["limbs", activeFrame.bodyDetected ? activeFrame.limbVisibility.toFixed(0) : "—"],
+            ["stable", activeFrame.stability >= 0 ? activeFrame.stability.toFixed(0) : "—"],
           ] as const).map(([label, value]) => (
             <div key={label} className="rounded-[12px] border border-border bg-bg px-2.5 py-2">
               <div className="text-[10px] uppercase tracking-[0.08em] text-muted">{label}</div>
@@ -138,14 +143,16 @@ function FramesSection({
         </div>
       </div>
 
-      <p className="text-[11px] text-muted">hover or focus a frame bar to inspect the shot, mapped limbs, and wasm histogram</p>
+      <p className="text-[11px] text-muted">hover or focus a frame bar to inspect the shot, mapped limbs, interaction zone, and wasm motion/exposure stats</p>
 
       {([
         ["brightness", "light"],
         ["sharpness", "focus"],
         ["blur", "clarity"],
         ["frameDiff", "motion"],
-        ["limbVisibility", "limbs"],
+        ["actionMotion", "action"],
+        ["peripheralMotion", "edge"],
+        ["interactionZoneCoverage", "zone"],
       ] as const).map(([key, label]) => (
         <div key={key} className="flex items-center gap-2">
           <span className="w-12 text-right text-[11px] text-muted">{label}</span>
@@ -198,6 +205,21 @@ export function MetricsPanel({ score, previews = [] }: { score: VideoScore; prev
       <Row label="clarity" value={metrics.blur.toFixed(0)} pct={metrics.blur} />
       <Row label="stable" value={metrics.stability.toFixed(0)} pct={metrics.stability} />
       <Row
+        label="zone"
+        value={metrics.interactionZoneCoverage.toFixed(0)}
+        pct={metrics.interactionZoneCoverage}
+      />
+      <Row
+        label="2 hands"
+        value={`${metrics.bimanualRate.toFixed(0)}%`}
+        pct={metrics.bimanualRate}
+      />
+      <Row
+        label="exposure"
+        value={metrics.exposureIntegrity.toFixed(0)}
+        pct={metrics.exposureIntegrity}
+      />
+      <Row
         label="hands"
         value={`${metrics.handDetectionRate.toFixed(0)}%`}
         pct={metrics.handDetectionRate}
@@ -236,8 +258,10 @@ export function MetricsPanel({ score, previews = [] }: { score: VideoScore; prev
           {([
             ["consistency", temporal.consistencyScore.toFixed(0)],
             ["flicker", temporal.flickerScore.toFixed(0)],
+            ["jerk", temporal.motionJerkScore.toFixed(0)],
             ["drops", String(temporal.qualityDrops)],
             ["dupes", String(temporal.duplicateFrames)],
+            ["cuts", String(temporal.shotChanges)],
           ] as const).map(([k, v]) => (
             <div key={k} className="flex justify-between">
               <span className="text-[12px] text-muted">{k}</span>
@@ -273,6 +297,8 @@ function DetailedSection({ score }: { score: VideoScore }) {
           average luminance across all frames is {metrics.brightness.toFixed(1)} out of 100.
           computed on the gpu using bt.709 weighted luminance (0.2126r + 0.7152g + 0.0722b)
           per pixel, then averaged.
+          average shadow clipping: {metrics.shadowClip.toFixed(1)}%.
+          average highlight clipping: {metrics.highlightClip.toFixed(1)}%.
           {metrics.brightness < 30
             ? " footage leans a bit underexposed, so darker sections may hide detail."
             : metrics.brightness > 85
@@ -354,6 +380,19 @@ function DetailedSection({ score }: { score: VideoScore }) {
         </p>
       </div>
 
+      <div>
+        <p className="mb-1 font-medium text-text">egocentric signals</p>
+        <p>
+          lower-center hand interaction coverage averages {metrics.interactionZoneCoverage.toFixed(1)}.
+          both hands are visible together in {metrics.bimanualRate.toFixed(1)}% of frames.
+          action-zone motion averages {metrics.actionMotion.toFixed(1)}, while peripheral motion averages {metrics.peripheralMotion.toFixed(1)}.
+          that separation matters more for first-person footage than a single global motion number: it helps distinguish hand activity in the workspace from whole-scene camera swings.
+          {metrics.interactionZoneCoverage < 35
+            ? " hand activity is not staying in the main workspace for very long."
+            : " hand activity is staying in the expected lower-center workspace."}
+        </p>
+      </div>
+
       {audio && (
         <div>
           <p className="mb-1 font-medium text-text">audio</p>
@@ -379,29 +418,31 @@ function DetailedSection({ score }: { score: VideoScore }) {
           mean absolute difference between consecutive frames).
           flicker: {temporal.flickerScore.toFixed(1)} (detects rapid alternating brightness
           changes {'>'} 5 points across 3-frame windows).
+          motion jerk: {temporal.motionJerkScore.toFixed(1)} (penalizes abrupt changes in peripheral motion, which is a good proxy for sharp egocentric head turns).
           quality drops: {temporal.qualityDrops} (frames where sharpness drops {'>'} 20 points
           below the running 5-frame average).
           duplicate frames: {temporal.duplicateFrames} (consecutive frames with wasm-computed
           mean luminance difference near zero).
+          cut candidates: {temporal.shotChanges} (frames where both global and peripheral motion spike strongly).
         </p>
       </div>
 
       <div>
         <p className="mb-1 font-medium text-text">custom wasm frame analysis</p>
         <p>
-          a small custom webassembly module computes a 16-bin luminance histogram and raw
-          frame-to-frame luma difference directly from rgba frame buffers. that gives the frames
-          view a more useful hover inspector and gives temporal duplicate detection a pixel-based
-          signal instead of relying only on aggregated frame scores.
+          a small custom webassembly module computes a 16-bin luminance histogram, shadow/highlight clipping,
+          and separate motion signals for the lower-center interaction zone versus the periphery directly from rgba frame buffers.
+          that gives the frames view a more useful hover inspector for first-person footage and gives temporal analysis a better signal than one flat frame-diff number.
         </p>
       </div>
 
       <div>
         <p className="mb-1 font-medium text-text">scoring</p>
         <p>
-          final score is a weighted sum: brightness 13%, sharpness 13%, clarity 13%,
-          stability 13%, hand detection rate 14%, hand confidence 5%, body mapping rate 8%,
-          limb visibility 8%, audio 5%, temporal 8%.
+          final score is a weighted sum: brightness 10%, sharpness 11%, clarity 11%,
+          stability 10%, hand detection rate 12%, hand confidence 4%, body mapping rate 6%,
+          limb visibility 7%, interaction-zone coverage 9%, two-hand visibility 5%,
+          exposure integrity 7%, audio 4%, temporal 4%.
           all metrics are normalized to 0–100. grade thresholds: a ≥ 90, b ≥ 80, c ≥ 70,
           d ≥ 60, f {'<'} 60. all computation runs locally in your browser via webgpu
           compute shaders and mediapipe wasm. nothing is uploaded.

@@ -30,11 +30,16 @@ function verdict(s: VideoScore): string {
   else if (s.overallScore >= 60) p.push("overall, this is in a workable place.");
   else p.push("there is a good base here, with a few areas worth refining.");
   if (s.metrics.stability < 40) p.push("camera motion is a bit noticeable.");
+  if (s.temporal.motionJerkScore < 45) p.push("head or scene motion changes abruptly in a few stretches.");
   if (s.metrics.sharpness < 30) p.push("focus softens in places.");
   if (s.metrics.brightness < 30) p.push("some frames are darker than ideal.");
+  if (s.metrics.exposureIntegrity < 55) p.push("exposure clipping shows up in brighter or darker regions.");
   if (s.metrics.handDetectionRate < 30) p.push("hands are only visible intermittently.");
+  else if (s.metrics.interactionZoneCoverage < 35) p.push("hand activity spends limited time in the lower-center interaction zone.");
+  if (s.metrics.bimanualRate < 20) p.push("both hands are not visible together very often.");
   if (s.metrics.bodyDetectionRate < 40) p.push("full limb mapping only holds in parts of the clip.");
   else if (s.metrics.limbVisibility < 45) p.push("some arm or leg landmarks drop out through motion or framing.");
+  if (s.temporal.shotChanges > 0) p.push(`${s.temporal.shotChanges} strong scene transitions or cuts show up.`);
   if (s.temporal.qualityDrops > 2) p.push(`${s.temporal.qualityDrops} brief quality dips show up.`);
   return p.join(" ");
 }

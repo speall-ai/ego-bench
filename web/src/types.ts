@@ -24,10 +24,16 @@ export interface FrameMetrics {
   blur: number; // 0-100 (100 = no blur)
   stability: number; // 0-100 (100 = perfectly stable), -1 for first frame
   frameDiff: number; // 0-100, -1 for first frame
+  actionMotion: number; // 0-100, lower-center egocentric action-zone motion
+  peripheralMotion: number; // 0-100, motion outside the action zone
   lumaHistogram: number[]; // 16 bins, percentages summing to ~100
+  shadowClip: number; // 0-100
+  highlightClip: number; // 0-100
   handDetected: boolean;
+  bothHandsDetected: boolean;
   handConfidence: number; // 0-1
   handLandmarkCount: number;
+  interactionZoneCoverage: number; // 0-100
   bodyDetected: boolean;
   bodyLandmarkCount: number;
   bodyVisibility: number; // 0-100
@@ -50,8 +56,10 @@ export interface AudioMetrics {
 export interface TemporalMetrics {
   consistencyScore: number; // 0-100
   flickerScore: number; // 0-100 (100 = no flicker)
+  motionJerkScore: number; // 0-100 (100 = smooth motion transitions)
   qualityDrops: number;
   duplicateFrames: number;
+  shotChanges: number;
 }
 
 export interface VideoScore {
@@ -62,11 +70,18 @@ export interface VideoScore {
     sharpness: number;
     blur: number;
     stability: number;
+    actionMotion: number;
+    peripheralMotion: number;
     handDetectionRate: number;
+    bimanualRate: number;
     avgHandConfidence: number;
+    interactionZoneCoverage: number;
     bodyDetectionRate: number;
     bodyVisibility: number;
     limbVisibility: number;
+    shadowClip: number;
+    highlightClip: number;
+    exposureIntegrity: number;
   };
   audio: AudioMetrics | null;
   temporal: TemporalMetrics;

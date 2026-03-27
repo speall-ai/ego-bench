@@ -170,15 +170,19 @@ export default function App() {
         const [b, s, bl] = await Promise.all([bm.compute(fr), sm.compute(fr), blm.compute(fr)]);
         const st = i > 0 ? await ofm.compute(fr, frames[i - 1]) : -1;
         const pixelStats = frameAnalyzer.analyzeFrame(fr);
-        const frameDiff = i > 0 ? frameAnalyzer.diffFrames(fr, frames[i - 1]) : -1;
-        let hDet = false, hConf = 0, hLm = 0;
+        const frameDiffs = i > 0
+          ? frameAnalyzer.diffFrames(fr, frames[i - 1])
+          : { global: -1, action: -1, peripheral: -1 };
+        let hDet = false, bothHands = false, hConf = 0, hLm = 0, interactionZoneCoverage = 0;
         let bodyDet = false, bodyLm = 0, bodyVis = 0, limbVis = 0;
         let bodyMap = null;
         if (mapper) {
           const mapping = mapper.detect(fr);
           hDet = mapping.handDetected;
+          bothHands = mapping.bothHandsDetected;
           hConf = mapping.handConfidence;
           hLm = mapping.handLandmarkCount;
+          interactionZoneCoverage = mapping.interactionZoneCoverage;
           bodyDet = mapping.bodyDetected;
           bodyLm = mapping.bodyLandmarkCount;
           bodyVis = mapping.bodyVisibility;
@@ -194,11 +198,17 @@ export default function App() {
           sharpness: s,
           blur: bl,
           stability: st,
-          frameDiff,
+          frameDiff: frameDiffs.global,
+          actionMotion: frameDiffs.action,
+          peripheralMotion: frameDiffs.peripheral,
           lumaHistogram: pixelStats.histogram,
+          shadowClip: pixelStats.shadowClip,
+          highlightClip: pixelStats.highlightClip,
           handDetected: hDet,
+          bothHandsDetected: bothHands,
           handConfidence: hConf,
           handLandmarkCount: hLm,
+          interactionZoneCoverage,
           bodyDetected: bodyDet,
           bodyLandmarkCount: bodyLm,
           bodyVisibility: bodyVis,

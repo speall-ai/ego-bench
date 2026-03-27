@@ -10,6 +10,11 @@ const MODEL_CANDIDATES = [
   { label: "holistic gpu", delegate: "GPU" as const },
   { label: "holistic cpu", delegate: "CPU" as const },
 ] as const;
+const HAND_VISIBILITY_THRESHOLD = 0.08;
+
+function isInActionZone(point: LandmarkPoint): boolean {
+  return point.x >= 0.2 && point.x < 0.8 && point.y >= 0.35 && point.y < 1;
+}
 
 function clampVisibility(value: number | undefined): number {
   if (typeof value !== "number" || Number.isNaN(value)) return 0;
@@ -25,6 +30,23 @@ function toPoints(
     y: landmark.y,
     visibility: clampVisibility(landmark.visibility),
   }));
+}
+
+function analyzeHandCoverage(map: FrameBodyMap): {
+  bothHandsDetected: boolean;
+  interactionZoneCoverage: number;
+} {
+  const leftHand = map.leftHandLandmarks.filter((point) => point.visibility >= HAND_VISIBILITY_THRESHOLD);
+  const rightHand = map.rightHandLandmarks.filter((point) => point.visibility >= HAND_VISIBILITY_THRESHOLD);
+  const visiblePoints = [...leftHand, ...rightHand];
+  const handsVisible = Number(leftHand.length >= 5) + Number(rightHand.length >= 5);
+  const pointsInActionZone = visiblePoints.filter(isInActionZone).length;
+
+  return {
+    bothHandsDetected: handsVisible === 2,
+    interactionZoneCoverage:
+      visiblePoints.length > 0 ? (pointsInActionZone / visiblePoints.length) * 100 : 0,
+  };
 }
 
 export class BodyMapper {
@@ -79,8 +101,10 @@ export class BodyMapper {
 
   detect(frame: FrameData): {
     handDetected: boolean;
+    bothHandsDetected: boolean;
     handConfidence: number;
     handLandmarkCount: number;
+    interactionZoneCoverage: number;
     bodyDetected: boolean;
     bodyLandmarkCount: number;
     bodyVisibility: number;
@@ -101,11 +125,14 @@ export class BodyMapper {
       leftHandLandmarks: toPoints(results.leftHandLandmarks[0]),
       rightHandLandmarks: toPoints(results.rightHandLandmarks[0]),
     });
+    const handCoverage = analyzeHandCoverage(processed.map);
 
     return {
       handDetected: processed.handDetected,
+      bothHandsDetected: handCoverage.bothHandsDetected,
       handConfidence: processed.handConfidence,
       handLandmarkCount: processed.handLandmarkCount,
+      interactionZoneCoverage: handCoverage.interactionZoneCoverage,
       bodyDetected: processed.bodyDetected,
       bodyLandmarkCount: processed.bodyLandmarkCount,
       bodyVisibility: processed.bodyVisibility,
